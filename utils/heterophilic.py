@@ -3,6 +3,7 @@
 
 import torch
 import numpy as np
+import os
 import os.path as osp
 import torch_geometric.transforms as T
 
@@ -301,12 +302,40 @@ def get_dataset(name):
     if name in ['cornell', 'texas', 'wisconsin']:
         dataset = WebKB(root=data_root, name=name, transform=T.NormalizeFeatures())
     elif name in ['chameleon', 'squirrel']:
-        dataset = WikipediaNetwork(root=data_root, name=name, transform=T.NormalizeFeatures())
+        dataset = load_heterophilic_data(name)
+        #dataset = WikipediaNetwork(root=data_root, name=name, transform=T.NormalizeFeatures())
     elif name == 'film':
         dataset = Actor(root=data_root, transform=T.NormalizeFeatures())
     elif name in ['cora', 'citeseer', 'pubmed']:
         dataset = Planetoid(root=data_root, name=name, transform=T.NormalizeFeatures())
     else:
         raise ValueError(f'dataset {name} not supported in dataloader')
+
+    return dataset
+
+def load_heterophilic_data(dataset_str):
+    if dataset_str == 'squirrel':
+        dataset_str = 'squirrel_filtered'
+    elif dataset_str == 'chameleon':
+        dataset_str = 'chameleon_filtered'
+    data = np.load(os.path.join('heterophilic-data', f'{dataset_str.replace("-", "_")}.npz'))
+    features = torch.tensor(data['node_features'])
+    labels = torch.tensor(data['node_labels'])
+    edges = torch.tensor(data['edges']).t()
+    full_edges = torch.unique(torch.cat([edges, edges.flip(0)], dim=1), dim=1)
+    train_masks = torch.tensor(data['train_masks'])
+    val_masks = torch.tensor(data['val_masks'])
+    test_masks = torch.tensor(data['test_masks'])
+
+    dataset = Data(x=features,
+                   edge_index=full_edges if dataset_str not in ['roman_empire', 'squirrel_filtered_directed', 'chameleon_filtered_directed'] else edges,
+                   y=labels,
+                   train_mask=train_masks,
+                   val_mask=val_masks,
+                   test_mask=test_masks)
+    
+    print(dataset)
+    
+    #loader = DataLoader([dataset], batch_size=1, shuffle=False)
 
     return dataset

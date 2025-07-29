@@ -9,8 +9,8 @@ from torch import nn
 from models.sheaf_base import SheafDiffusion
 from models import laplacian_builders as lb
 from models.sheaf_models import LocalConcatSheafLearner, EdgeWeightLearner
-from torchdiffeq import odeint
-from torchdiffeq import odeint_adjoint
+# from torchdiffeq import odeint
+# from torchdiffeq import odeint_adjoint
 
 
 class LaplacianODEFunc(nn.Module):

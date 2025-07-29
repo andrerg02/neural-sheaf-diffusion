@@ -33,11 +33,11 @@ def reset_wandb_env():
             del os.environ[k]
 
 
-def train(model, optimizer, data):
+def train(model, optimizer, data, fold):
     model.train()
     optimizer.zero_grad()
-    out = model(data.x)[data.train_mask]
-    nll = F.nll_loss(out, data.y[data.train_mask])
+    out = model(data.x)[data.train_mask[fold]]
+    nll = F.nll_loss(out, data.y[data.train_mask[fold]])
     loss = nll
     loss.backward()
 
@@ -45,11 +45,12 @@ def train(model, optimizer, data):
     del out
 
 
-def test(model, data):
+def test(model, data, fold):
     model.eval()
     with torch.no_grad():
         logits, accs, losses, preds = model(data.x), [], [], []
         for _, mask in data('train_mask', 'val_mask', 'test_mask'):
+            mask = mask[fold]
             pred = logits[mask].max(1)[1]
             acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
 
@@ -62,8 +63,8 @@ def test(model, data):
 
 
 def run_exp(args, dataset, model_cls, fold):
-    data = dataset[0]
-    data = get_fixed_splits(data, args['dataset'], fold)
+    data = dataset#[0]
+    #data = get_fixed_splits(data, args['dataset'], fold)
     data = data.to(args['device'])
 
     model = model_cls(data.edge_index, args)
@@ -84,10 +85,10 @@ def run_exp(args, dataset, model_cls, fold):
     bad_counter = 0
 
     for epoch in range(args['epochs']):
-        train(model, optimizer, data)
+        train(model, optimizer, data, fold)
 
         [train_acc, val_acc, tmp_test_acc], preds, [
-            train_loss, val_loss, tmp_test_loss] = test(model, data)
+            train_loss, val_loss, tmp_test_loss] = test(model, data, fold)
         if fold == 0:
             res_dict = {
                 f'fold{fold}_train_acc': train_acc,
@@ -163,9 +164,9 @@ if __name__ == '__main__':
 
     # Add extra arguments
     args.sha = sha
-    args.graph_size = dataset[0].x.size(0)
+    args.graph_size = dataset.x.size(0)
     args.input_dim = dataset.num_features
-    args.output_dim = dataset.num_classes
+    args.output_dim = dataset.y.unique().size(0)
     args.device = torch.device(f'cuda:{args.cuda}' if torch.cuda.is_available() else 'cpu')
     assert args.normalised or args.deg_normalised
     if args.sheaf_decay is None:
