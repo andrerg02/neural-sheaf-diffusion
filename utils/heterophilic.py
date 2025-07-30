@@ -301,7 +301,7 @@ def get_dataset(name):
     data_root = osp.join(ROOT_DIR, 'datasets')
     if name in ['cornell', 'texas', 'wisconsin']:
         dataset = WebKB(root=data_root, name=name, transform=T.NormalizeFeatures())
-    elif name in ['chameleon', 'squirrel']:
+    elif name in ['chameleon', 'squirrel', 'roman_empire', 'amazon_ratings', 'minesweeper', 'questions', 'tolokers']:
         dataset = load_heterophilic_data(name)
         #dataset = WikipediaNetwork(root=data_root, name=name, transform=T.NormalizeFeatures())
     elif name == 'film':
